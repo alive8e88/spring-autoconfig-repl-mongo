@@ -13,7 +13,7 @@
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = NONE)
 @EnableAutoConfiguration(exclude = {EmbeddedMongoAutoConfiguration.class, ReplicaEmbeddedMongoConfiguration.class})
-public class DemoApplicationTestV4 {
+public class DemoApplicationTest {
 
  @Autowired
  private MongoClient mongo;
@@ -42,5 +42,26 @@ public class DemoApplicationTestV4 {
          return new ReplicaEmbeddedMongoImpl(new MongodConfigOption(true));
      }
   }    
+}
+```
+
+Spring caches the application context by default when running tests. And sometime mongod process cannot stop gracefully after test excution. 
+For this reasons if you need to cleanup application context, use @DirtiesContext. @DirtiesContext is an extremely expensive resource when it comes to execution time, 
+and as such, we should be careful. 
+```java
+@DirtiesContext
+@ExtendWith(SpringExtension.class)
+@SpringBootTest(webEnvironment = NONE)
+@EnableAutoConfiguration(exclude = {EmbeddedMongoAutoConfiguration.class, ReplicaEmbeddedMongoConfiguration.class})
+public class DemoApplicationTest {
+
+ @Autowired
+ private MongoClient mongo;
+
+ @Test
+ public void test() {
+     // test code
+ }
+ 
 }
 ```
