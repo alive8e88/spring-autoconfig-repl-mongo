@@ -32,7 +32,7 @@ public class DemoApplicationTest {
      MongoClientFactoryBean mongoClientFactoryBean() {
 
          MongoClientFactoryBean factory = new MongoClientFactoryBean();
-         factory.setReplicaSetSeeds(AbstractMongoReplicaConfig.getSeeds());
+         factory.setMongoClientSettings(AbstractMongoReplicaConfig.getClientSetting());
          return factory;
      }
 
@@ -64,4 +64,121 @@ public class DemoApplicationTest {
  }
  
 }
+```
+
+Spring is embracing a new feature shipped with MongoDB 4.x that supports multi-document transactions. That feature works only for existing collections. 
+A multi-document transaction cannot include an insert operation that would result in the creation of a new collection. 
+You should create your collections before hand to use this feature. 
+
+This exanple use custom TestExecutionListener to create a coolection by scanning a classpath to find all class annotated with @Document 
+and get collection name from them to create a new collection before begin a transaction.
+```java
+@TestExecutionListeners(value = {MongodbCustomTestExecutionListener.class}, mergeMode = MergeMode.MERGE_WITH_DEFAULTS)
+@DirtiesContext
+@ExtendWith(SpringExtension.class)
+@SpringBootTest(webEnvironment = NONE)
+@EnableAutoConfiguration(exclude = {EmbeddedMongoAutoConfiguration.class, ReplicaEmbeddedMongoConfiguration.class})
+public class DemoApplicationTest {
+
+ @Autowired
+ private MongoClient mongo;
+
+ @Test
+ public void test() {
+     // test code
+ }
+ 
+}
+
+public class MongodbCustomTestExecutionListener implements TestExecutionListener, Ordered  {
+
+    private static final Logger logger = LoggerFactory.getLogger(MongodbCustomTestExecutionListener.class);
+
+    public void prepareTestInstance(TestContext testContext) throws Exception {
+        MongoClient mongoClient = testContext.getApplicationContext().getBean(MongoClient.class);
+        if(mongoClient == null) return;
+
+        MongoProperties properties = testContext.getApplicationContext().getBean(MongoProperties.class);
+        logger.trace("Detect mongo properties:{}", properties);
+        if(properties == null) return;
+
+        List<String> collections = new MongodbDocumentClassPathScanner("com.your.package.require.to.scan").getCollectionName();
+        if(collections.isEmpty()) return;
+
+        logger.info("Detect default database name:{}", properties.getDatabase());
+        MongoDatabase db = mongoClient.getDatabase(properties.getDatabase());
+        createCollectionIfNotExist(db, collections);
+    };
+
+    private void createCollectionIfNotExist(MongoDatabase db, List<String> collections) {
+        final Set<String> existingCollections = getExistingCollection(db);
+        collections.stream()
+                .filter(name -> !existingCollections.contains(name))
+                .forEach(name -> db.createCollection(name));
+    }
+
+    private Set<String> getExistingCollection(MongoDatabase db) {
+        Set<String> existingCollections = new HashSet<>();
+        for (String existingCollection : db.listCollectionNames()) {
+            existingCollections.add(existingCollection);
+        }
+        return existingCollections;
+    }
+
+    /**
+     * We need to run before TransactionalTestExecutionListener(order = 4000), but after DirtiesContextTestExecutionListener(order = 3000)
+     * @return
+     */
+    @Override
+    public int getOrder() {
+        return 3500;
+    };
+    
+    public void beforeTestClass(TestContext testContext) throws Exception {
+        logger.info("beforeTestClass : {}", testContext.getTestClass());
+    };
+
+    public void beforeTestMethod(TestContext testContext) throws Exception {
+        logger.info("beforeTestMethod : {}", testContext.getTestClass());
+    };
+
+    public void afterTestMethod(TestContext testContext) throws Exception {
+        logger.info("afterTestMethod : {}", testContext.getTestMethod());
+    };
+
+    public void afterTestClass(TestContext testContext) throws Exception {
+        logger.info("afterTestClass : {}", testContext.getTestClass());
+    }
+}
+
+public class MongodbDocumentClassPathScanner {
+
+    private final String packageName;
+
+    public MongodbDocumentClassPathScanner(String packageName) {
+        this.packageName = packageName;
+    }
+
+    public List<String> getCollectionName() {
+
+        ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false);
+        scanner.addIncludeFilter(new AnnotationTypeFilter(Document.class));
+
+        List<String> names = new ArrayList<>();
+        for (BeanDefinition beanDefinition : scanner.findCandidateComponents(packageName)) {
+
+            if (beanDefinition instanceof AnnotatedBeanDefinition) {
+                AnnotatedBeanDefinition annotatedBeanDefinition = (AnnotatedBeanDefinition) beanDefinition;
+                AnnotationMetadata metadata = annotatedBeanDefinition.getMetadata();
+                Map<String, Object> annotationAttributes = metadata.getAnnotationAttributes(Document.class.getName());
+                if(annotationAttributes != null) {
+                    names.add(annotationAttributes.get("collection").toString());
+                }
+            }
+        }
+
+        return names;
+    }
+}
+
 ```
