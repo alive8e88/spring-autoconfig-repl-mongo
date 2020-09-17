@@ -4,7 +4,8 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.alivex.spring.config</groupId>
     <artifactId>replica-embedded-mongo</artifactId>
-    <version>0.0.1</version>
+    <!-- semetic version to spring-data-mongodb -->
+    <version>3.0.3</version>
     <name>replica-embeddedmongo-autoconfig</name>
     <description>Auto configuration for embedded MongoDB with replica set</description>
 
@@ -19,12 +20,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
-            <version>2.1.5.RELEASE</version>
+            <version>2.3.3.RELEASE</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
-            <version>2.1.5.RELEASE</version>
+            <version>2.3.3.RELEASE</version>
             <optional>true</optional>
         </dependency>
         <dependency>
@@ -36,13 +37,13 @@
         <dependency>
             <groupId>de.flapdoodle.embed</groupId>
             <artifactId>de.flapdoodle.embed.mongo</artifactId>
-            <version>2.1.2</version>
+            <version>2.2.0</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>org.springframework.data</groupId>
             <artifactId>spring-data-mongodb</artifactId>
-            <version>2.1.8.RELEASE</version>
+            <version>3.0.3.RELEASE</version>
             <type>jar</type>
         </dependency>
         <dependency>
@@ -61,6 +62,11 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
             <version>1.7.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-sync</artifactId>
+            <version>4.0.5</version>
         </dependency>
     </dependencies>
     <build>

@@ -3,8 +3,6 @@ package com.alivex.autoconfig;
 import com.alivex.mongo.repl.AbstractMongoReplicaConfig;
 import com.alivex.mongo.repl.ReplicaEmbeddedMongo;
 import com.alivex.mongo.repl.ReplicaEmbeddedMongoImpl;
-import com.mongodb.ServerAddress;
-import com.mongodb.client.MongoClient;
 import de.flapdoodle.embed.mongo.MongodExecutable;
 import de.flapdoodle.embed.mongo.MongodStarter;
 import java.io.IOException;
@@ -19,16 +17,14 @@ import org.springframework.data.mongodb.core.MongoClientFactoryBean;
 
 @AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE)
 @Configuration
-@ConditionalOnClass({MongoClient.class, MongodStarter.class})
+@ConditionalOnClass({com.mongodb.client.MongoClient.class, MongodStarter.class})
 public class ReplicaEmbeddedMongoConfiguration {
 
     @Bean
-//    @Primary
     @DependsOn({"replicaEmbeddedMongo"})
     public MongoClientFactoryBean createMongoClientFactoryBean() {
-
         MongoClientFactoryBean factory = new MongoClientFactoryBean();
-        factory.setReplicaSetSeeds(getSeeds());
+        factory.setMongoClientSettings(AbstractMongoReplicaConfig.getClientSetting());
         return factory;
     }
 
@@ -37,15 +33,10 @@ public class ReplicaEmbeddedMongoConfiguration {
         return new ReplicaEmbeddedMongoImpl();
     }
 
-//    @Primary
     @Bean(initMethod = "start", destroyMethod = "stop")
     @DependsOn({"replicaEmbeddedMongo"})
     @ConditionalOnMissingBean
     public MongodExecutable embeddedMongoServer() throws IOException {
         return null;
-    }
-
-    private ServerAddress[] getSeeds() {
-        return AbstractMongoReplicaConfig.getSeeds();
     }
 }

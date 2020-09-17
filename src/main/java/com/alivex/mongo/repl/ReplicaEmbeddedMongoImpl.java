@@ -2,9 +2,8 @@
 package com.alivex.mongo.repl;
 
 import com.mongodb.BasicDBList;
-import com.mongodb.MongoClient;
-import com.mongodb.ReplicaSetStatus;
-import com.mongodb.ServerAddress;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
 import de.flapdoodle.embed.mongo.Command;
 import de.flapdoodle.embed.mongo.MongodExecutable;
@@ -41,7 +40,7 @@ public class ReplicaEmbeddedMongoImpl extends AbstractMongoReplicaConfig impleme
     public ReplicaEmbeddedMongoImpl() {
         this.mongodOptions = new MongodConfigOption();
     }
-    
+
     public ReplicaEmbeddedMongoImpl(MongodConfigOption mongodOptions) {
         this.mongodOptions = mongodOptions;
     }
@@ -86,11 +85,6 @@ public class ReplicaEmbeddedMongoImpl extends AbstractMongoReplicaConfig impleme
         } catch (Exception e) {
             throw new IllegalStateException("Failed to stop embeded mongo replica set.", e);
         }
-    }
-
-    @Override
-    public ReplicaSetStatus getStatus() {
-        return this.mongo != null ? this.mongo.getReplicaSetStatus() : null;
     }
 
     private void startMongoProcesses() throws IOException, DistributionException {
@@ -148,7 +142,9 @@ public class ReplicaEmbeddedMongoImpl extends AbstractMongoReplicaConfig impleme
     }
 
     private void initMongoClient() throws UnknownHostException {
-        mongo = new MongoClient(new ServerAddress(Network.getLocalHost(), PRIMARY_PORT));
+        //https://docs.mongodb.com/manual/reference/connection-string/#examples
+        mongo = MongoClients.create("mongodb://" + HOST + ":" + PRIMARY_PORT);
+//        mongo = new MongoClient(new ServerAddress(Network.getLocalHost(), PRIMARY_PORT));
     }
 
     private void initiateReplicaSet() {
@@ -160,7 +156,7 @@ public class ReplicaEmbeddedMongoImpl extends AbstractMongoReplicaConfig impleme
 
     private Document createReplicaConfig(int node1Port, int node2Port) {
 
-        Document config = new Document("_id", "rs0");
+        Document config = new Document("_id", REPLICA_NAME);
 
         BasicDBList members = new BasicDBList();
         members.add(new Document("_id", 0).append("host", HOST + ":" + node1Port));
