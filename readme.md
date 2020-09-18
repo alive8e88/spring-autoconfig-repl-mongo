@@ -3,7 +3,7 @@
 <dependency>
     <groupId>com.alivex.spring.config</groupId>
     <artifactId>replica-embedded-mongo</artifactId>
-    <version>0.0.1</version>
+    <version>3.0.3</version>
     <scope>test</scope>
 </dependency>
 ```
@@ -66,11 +66,32 @@ public class DemoApplicationTest {
 }
 ```
 
+
 Spring is embracing a new feature shipped with MongoDB 4.x that supports multi-document transactions. That feature works only for existing collections. 
 A multi-document transaction cannot include an insert operation that would result in the creation of a new collection. 
 You should create your collections before hand to use this feature. 
 
-This exanple use custom TestExecutionListener to create a coolection by scanning a classpath to find all class annotated with @Document 
+To workaround for this issue you can explicit config spring data mongo to auto index creation that results in collection creation.
+
+```properties
+#Add this config to your test application.properties file
+spring.data.mongodb.auto-index-creation=true
+```
+
+Or you can use an event listener method to prepare a collection before TransactionalTestExecutionListener begin a transaction for your test case.
+```java
+/**
+ * This method will be invoke by TransactionalTestExecutionListener 
+ * @BeforeTransaction or @AfterTransaction are not run for test methods that are not configured to run within a transaction
+ * https://docs.spring.io/spring/docs/current/spring-framework-reference/testing.html#testcontext-tx-before-and-after-tx
+ */
+@BeforeTransaction
+public void initCollection() {
+    //... init mongodb collection
+}
+
+```
+But if you need more control you can implement your own test exceution listener. The example below use custom TestExecutionListener to create a collection by scanning a classpath to find all class annotated with @Document 
 and get collection name from them to create a new collection before begin a transaction.
 ```java
 @TestExecutionListeners(value = {MongodbCustomTestExecutionListener.class}, mergeMode = MergeMode.MERGE_WITH_DEFAULTS)
